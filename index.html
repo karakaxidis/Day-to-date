@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Μετατροπέας Ημέρας → Ημερομηνία</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f62fe">
+  <link rel="icon" href="icons/icon-192.png">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    h1 { font-size: 20px; margin-bottom: 10px; }
+    label { font-weight: bold; display: block; margin-top: 15px; }
+    input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; }
+    button { margin-top: 15px; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; background: #0f62fe; color: white; }
+    button:hover { filter: brightness(0.95); }
+    .result { margin-top: 20px; padding: 10px; border-radius: 6px; background: #f1f3f5; font-size: 18px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .note { color: #666; font-size: 12px; margin-top: 6px; }
+    footer { text-align:center; color:#666; font-size:12px; margin-top:24px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Μετατροπέας Αριθμού Ημέρας → Ημερομηνία</h1>
+    <div class="row">
+      <div>
+        <label for="year">Έτος:</label>
+        <input type="number" id="year" value="2025">
+        <div class="note" id="leapNote"></div>
+      </div>
+      <div>
+        <label for="day">Αριθμός ημέρας:</label>
+        <input type="number" id="day" value="1">
+        <div class="note" id="rangeNote"></div>
+      </div>
+    </div>
+    <button onclick="convertDay()">Μετατροπή</button>
+    <button onclick="setToday()">Υπολογισμός σημερινής ημέρας</button>
+    <div class="result" id="result">Αποτέλεσμα: —</div>
+    <footer>Λειτουργεί offline μετά την πρώτη επίσκεψη.</footer>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+
+    function isLeapYear(year) {
+      return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    }
+
+    function updateNotes() {
+      const year = parseInt(document.getElementById('year').value);
+      const maxDay = isLeapYear(year) ? 366 : 365;
+      document.getElementById('leapNote').innerText = isLeapYear(year) ? 'Δίσεκτο έτος (366 ημέρες)' : 'Μη δίσεκτο (365 ημέρες)';
+      document.getElementById('rangeNote').innerText = `Έγκυρο εύρος: 1–${maxDay}`;
+      const dayInput = document.getElementById('day');
+      dayInput.setAttribute('min', 1);
+      dayInput.setAttribute('max', maxDay);
+    }
+
+    function dateFromDay(year, day) {
+      const dt = new Date(year, 0, 1);
+      dt.setDate(day);
+      return dt;
+    }
+
+    function convertDay() {
+      const year = parseInt(document.getElementById('year').value);
+      const day = parseInt(document.getElementById('day').value);
+      const maxDay = isLeapYear(year) ? 366 : 365;
+
+      if (!Number.isFinite(year) || !Number.isFinite(day) || day < 1 || day > maxDay) {
+        document.getElementById('result').innerText = `Δώσε αριθμό ημέρας από 1 έως ${maxDay}.`;
+        return;
+      }
+      const date = dateFromDay(year, day);
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const formatted = date.toLocaleDateString('el-GR', options);
+      document.getElementById('result').innerText = `Ημέρα #${day} του ${year} → ${formatted}`;
+    }
+
+    function setToday() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const start = new Date(year, 0, 1);
+      const diff = Math.floor((today - start) / (24 * 3600 * 1000)) + 1;
+      document.getElementById('year').value = year;
+      document.getElementById('day').value = diff;
+      updateNotes();
+      convertDay();
+    }
+
+    document.getElementById('year').addEventListener('input', updateNotes);
+    document.addEventListener('DOMContentLoaded', updateNotes);
+  </script>
+</body>
+</html>
